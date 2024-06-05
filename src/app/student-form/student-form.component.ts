@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { StudentService } from '../student.service';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { Student } from '../student.model';
 
@@ -19,6 +19,7 @@ export class StudentFormComponent implements OnInit {
   courses: string[] = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
   genders: string[] = ['Male', 'Female', 'Other'];
   student: Student | null = null;
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -41,25 +42,25 @@ export class StudentFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
+    const subscriptionParam = this.route.paramMap.subscribe(params => {
       const id = Number(params.get('id'));
       if (id) {
         this.editMode = true;
         this.studentId = id;
        
-        this.studentService.getStudentById(id).subscribe((student: Student | null) => {
-          this.student = student;
-          console.log("det",this.student);
-          
+        const subscriptionStudent = this.studentService.getStudentById(id).subscribe((student: Student | null) => {
+          this.student = student;         
         });
-        
+        this.subscriptions.push(subscriptionStudent);
+       
         if (this.student) {
-          console.log("det",this.student);
-
           this.studentForm.patchValue(this.student);
         }
       }
     });
+
+    this.subscriptions.push(subscriptionParam);
+
   }
 
   private _filterCourses(value: string): string[] {
@@ -85,5 +86,8 @@ export class StudentFormComponent implements OnInit {
 
   onCancel() {
     this.router.navigate(['/']);
+  }
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 }
